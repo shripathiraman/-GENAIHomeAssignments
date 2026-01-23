@@ -111,11 +111,22 @@ function App() {
 
     const story = jiraStories.find(s => s.id === storyId)
     if (story) {
+      let description = story.description
+      try {
+        const doc = JSON.parse(description)
+        if (doc?.type === 'doc' && Array.isArray(doc.content)) {
+          description = doc.content
+            .map((p: any) => p.content?.map((c: any) => c.text || '').join('') || '')
+            .join('\n\n')
+        }
+      } catch (e) {
+        console.warn('Failed to parse Jira description doc:', e)
+      }
       setFormData({
         storyTitle: `${story.id}: ${story.title}`,
         // Handle possibly stringified JSON or raw text
-        description: story.description,
-        acceptanceCriteria: story.acceptanceCriteria,
+        description: '',
+        acceptanceCriteria: description,
         additionalInfo: ''
       })
     }

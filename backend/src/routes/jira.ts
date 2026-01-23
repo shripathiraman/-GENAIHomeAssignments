@@ -118,8 +118,8 @@ jiraRouter.post('/stories', async (req: express.Request, res: express.Response):
                 typeof issue.fields.description === 'string'
                     ? issue.fields.description
                     : JSON.stringify(issue.fields.description),
-            acceptanceCriteria:
-                'Fetching acceptance criteria requires knowing the custom field ID for your Jira instance.'
+            acceptanceCriteria: issue.fields.description
+            //'Fetching acceptance criteria requires knowing the custom field ID for your Jira instance.'
         }))
 
         res.json({ stories })
