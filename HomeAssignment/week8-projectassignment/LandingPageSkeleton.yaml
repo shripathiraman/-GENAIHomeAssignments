@@ -1,0 +1,67 @@
+dashboard:
+  name: "Private Capital Strategic Dashboard"
+  kpis:
+    - id: kpi_1
+      name: "Net New Capital Inflow"
+      type: "metric"
+      calculation: "on-demand"
+      source: "Excel/API"
+      granularity: "monthly"
+      historical_depth: 36
+    - id: kpi_2
+      name: "Fund Performance (IRR/CAGR)"
+      type: "metric"
+      calculation: "pre-computed"
+      source: "Excel/API"
+      granularity: "monthly"
+      historical_depth: 36
+    - id: kpi_3
+      name: "NAV Trend"
+      type: "metric"
+      calculation: "pre-computed"
+      source: "Excel/API"
+      granularity: "monthly"
+      historical_depth: 36
+    - id: kpi_4
+      name: "Marketing ROI"
+      type: "metric"
+      calculation: "pre-computed"
+      source: "Excel/API"
+      granularity: "monthly"
+      historical_depth: 36
+    - id: kpi_5
+      name: "Cost per Acquisition (CPA)"
+      type: "metric"
+      calculation: "on-demand"
+      source: "Excel/API"
+      granularity: "monthly"
+      historical_depth: 36
+
+  drill_hierarchy:
+    levels:
+      - Fund
+      - Share Class
+      - Geography
+      - Investor Segment
+    default_drill: "single-level"
+    optional_expand: true
+
+  compliance:
+    pii_fields:
+      - Investor Name
+      - Email
+      - Phone
+      - Internal ID
+      - Government ID
+      - Bank Details
+    masking: "tokenization / field-level masking"
+    frameworks:
+      - GDPR
+      - SOC 2
+      - ISO 27001
+      - Financial Regs
+      - Internal Policy
+
+  embedding:
+    full_embeddings: ["BRD", "Data Schema", "UI/UX Specs", "Historical Dashboards", "Technical Docs", "Compliance Rules"]
+    partial_embeddings: ["ETL Scripts Metadata"]

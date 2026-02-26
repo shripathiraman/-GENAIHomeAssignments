@@ -1,0 +1,187 @@
+// server/index.js
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { getPrecomputedMetric, getOnDemandMetric } = require("./metrics");
+const { maskPII } = require("./pii");
+const cache = require("./cache");
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// API: Fetch KPI Data
+app.post("/api/kpi", async (req, res) => {
+    try {
+        const { kpiId, filters } = req.body;
+
+        let data;
+
+        // Heavy metrics: pre-computed
+        if (["kpi_2", "kpi_3", "kpi_4"].includes(kpiId)) {
+            data = await getPrecomputedMetric(kpiId, filters);
+        } else {
+            // Light metrics: on-demand
+            data = await getOnDemandMetric(kpiId, filters);
+        }
+
+        // Mask PII before returning
+        const maskedData = maskPII(data);
+        res.json({ success: true, data: maskedData });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Error fetching KPI data" });
+    }
+});
+
+// Health Check
+app.get("/health", (req, res) => res.send("Dashboard API OK"));
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`NodeJS Dashboard API running on port ${PORT}`));
+
+// server/metrics.js
+const { readPrecomputed } = require("./precomputedStore");
+const { computeOnDemand } = require("./onDemand");
+const cache = require("./cache");
+
+// Fetch heavy precomputed metrics
+async function getPrecomputedMetric(kpiId, filters) {
+    const cacheKey = `${kpiId}_${JSON.stringify(filters)}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+    const data = await readPrecomputed(kpiId, filters);
+    cache.set(cacheKey, data);
+    return data;
+}
+
+// Compute light metrics on-demand
+async function getOnDemandMetric(kpiId, filters) {
+    return await computeOnDemand(kpiId, filters);
+}
+
+module.exports = { getPrecomputedMetric, getOnDemandMetric };
+
+// server/pii.js
+function maskPII(data) {
+    return data.map(row => ({
+        ...row,
+        "Investor Name": row["Investor Name"] ? "*****" : null,
+        "Email": row["Email"] ? "*****" : null,
+        "Phone": row["Phone"] ? "*****" : null,
+        "Internal ID": row["Internal ID"] ? "*****" : null,
+        "Government ID": row["Government ID"] ? "*****" : null,
+        "Bank Details": row["Bank Details"] ? "*****" : null,
+    }));
+}
+
+module.exports = { maskPII };
+
+// server/cache.js
+const NodeCache = require("node-cache");
+const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5 min TTL
+module.exports = cache;
+
+// client/src/App.js
+import React from "react";
+import DashboardPage from "./DashboardPage";
+
+function App() {
+  return <DashboardPage />;
+}
+
+export default App;
+
+// client/src/DashboardPage.js
+import React, { useState, useEffect } from "react";
+import KPIChart from "./KPIChart";
+import { fetchKPIData } from "./api";
+
+const kpis = [
+  { id: "kpi_1", name: "Net New Capital Inflow" },
+  { id: "kpi_2", name: "Fund Performance (IRR/CAGR)" },
+  { id: "kpi_3", name: "NAV Trend" },
+  { id: "kpi_4", name: "Marketing ROI" },
+  { id: "kpi_5", name: "Cost per Acquisition (CPA)" },
+];
+
+function DashboardPage() {
+  const [data, setData] = useState({});
+
+  useEffect(() => {
+    kpis.forEach(async (kpi) => {
+      const kpiData = await fetchKPIData(kpi.id, {});
+      setData(prev => ({ ...prev, [kpi.id]: kpiData }));
+    });
+  }, []);
+
+  return (
+    <div className="dashboard-container">
+      {kpis.map(kpi => (
+        <KPIChart key={kpi.id} kpi={kpi} data={data[kpi.id]} />
+      ))}
+    </div>
+  );
+}
+
+export default DashboardPage;
+
+// client/src/KPIChart.js
+import React, { useEffect, useRef } from "react";
+import * as d3 from "d3";
+
+function KPIChart({ kpi, data }) {
+  const chartRef = useRef();
+
+  useEffect(() => {
+    if (!data) return;
+    const svg = d3.select(chartRef.current);
+    svg.selectAll("*").remove(); // clear previous chart
+
+    // Example: simple bar chart for KPI 1 & 5, line chart for KPI 2 & 3
+    if (["kpi_1", "kpi_5"].includes(kpi.id)) {
+      const x = d3.scaleBand().domain(data.map(d => d.Month)).range([0, 400]).padding(0.1);
+      const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Value)]).range([200, 0]);
+      svg.append("g").attr("transform", "translate(0,200)").call(d3.axisBottom(x));
+      svg.append("g").call(d3.axisLeft(y));
+      svg.selectAll(".bar")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.Month))
+        .attr("y", d => y(d.Value))
+        .attr("width", x.bandwidth())
+        .attr("height", d => 200 - y(d.Value))
+        .attr("fill", "#4285F4");
+    } else {
+      // Line chart for IRR/CAGR, NAV, Marketing ROI
+      const x = d3.scaleTime().domain(d3.extent(data, d => new Date(d.Month))).range([0, 400]);
+      const y = d3.scaleLinear().domain([0, d3.max(data, d => d.Value)]).range([200, 0]);
+      svg.append("g").attr("transform", "translate(0,200)").call(d3.axisBottom(x));
+      svg.append("g").call(d3.axisLeft(y));
+      const line = d3.line().x(d => x(new Date(d.Month))).y(d => y(d.Value));
+      svg.append("path").datum(data).attr("d", line).attr("fill", "none").attr("stroke", "#FB8C00").attr("stroke-width", 2);
+    }
+  }, [data, kpi]);
+
+  return (
+    <div className="kpi-chart">
+      <h3>{kpi.name}</h3>
+      <svg ref={chartRef} width={450} height={250}></svg>
+    </div>
+  );
+}
+
+export default KPIChart;
+
+// client/src/api.js
+export async function fetchKPIData(kpiId, filters) {
+  const res = await fetch("https://YOUR_CLOUD_URL/api/kpi", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kpiId, filters }),
+  });
+  const json = await res.json();
+  return json.success ? json.data : [];
+}
+

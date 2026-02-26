@@ -1,0 +1,55 @@
+flowchart TD
+    subgraph Data_Sources
+        Excel[Excel / CSV Files] 
+        API[On-Demand API Endpoint]
+        Historical[Historical Dashboards / PDFs]
+        BRD[User Requirements / BRD / Notes]
+        UX[UI/UX Specs - Figma / Adobe XD]
+        Docs[Technical Docs / Swagger / Wiki]
+        Compliance[Compliance Rules - GDPR / SOC2 / ISO / Financial Regs]
+        ETLCode[ETL Scripts Metadata]
+    end
+
+    subgraph ETL_Layer
+        ETL[NodeJS ETL Microservices]
+        Masking[PII Masking / Tokenization]
+        PreCompute[Pre-Compute Heavy Metrics]
+        OnDemand[On-Demand Light Metrics]
+        EmbeddingGen[Vector Embedding Generator (V / PV)]
+        Cache[In-Memory NodeJS Cache]
+    end
+
+    subgraph Cloud_Infra
+        VectorDB[Cloud Vector DB (Pinecone / Weaviate)]
+        DashboardDB[Dashboard DB / Aggregation Store]
+        NodeServer[NodeJS Microservices Server]
+        Docker[Docker + Nginx]
+        CI_CD[Hybrid CI/CD Pipeline]
+    end
+
+    subgraph Frontend
+        ReactUI[React + D3 Dashboard]
+        DrillDown[Hybrid Drill-Down Navigation]
+        Fallback[Fallback Visuals & Error Handling]
+    end
+
+    %% Data flow connections
+    Excel --> ETL
+    API --> ETL
+    Historical --> ETL
+    BRD --> EmbeddingGen
+    UX --> EmbeddingGen
+    Docs --> EmbeddingGen
+    Compliance --> EmbeddingGen
+    ETLCode --> EmbeddingGen
+
+    ETL --> Masking --> PreCompute --> DashboardDB
+    ETL --> Masking --> OnDemand --> Cache
+    EmbeddingGen --> VectorDB
+    DashboardDB --> NodeServer
+    Cache --> NodeServer
+    NodeServer --> ReactUI
+    ReactUI --> DrillDown
+    ReactUI --> Fallback
+    Docker --> NodeServer
+    CI_CD --> Docker

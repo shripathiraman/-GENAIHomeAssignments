@@ -1,0 +1,82 @@
+dashboard:
+  page: "Landing View"
+  layout:
+    visuals_per_page: 6
+    storytelling_style: "Tableau"
+  kpis:
+    - id: kpi_1
+      name: "Net New Capital Inflow"
+      chart_type: "bar"
+      axes:
+        x: "Month"
+        y: "Net New Capital Inflow (Currency)"
+      aggregation: "sum"
+      drill_down: true
+      tooltip:
+        show: true
+        fields: ["Fund", "Share Class", "Geography", "Investor Segment", "Value"]
+      interactivity:
+        filterable: true
+        dynamic: true
+        highlight_on_hover: true
+
+    - id: kpi_2
+      name: "Fund Performance (IRR/CAGR)"
+      chart_type: "line"
+      axes:
+        x: "Month"
+        y: "Performance (%)"
+      aggregation: "pre-computed"
+      drill_down: true
+      tooltip:
+        show: true
+        fields: ["Fund", "Share Class", "Geography", "Investor Segment", "IRR", "CAGR"]
+      interactivity:
+        filterable: true
+        highlight_on_hover: true
+
+    - id: kpi_3
+      name: "NAV Trend"
+      chart_type: "line"
+      axes:
+        x: "Month"
+        y: "NAV (Currency)"
+      aggregation: "pre-computed"
+      drill_down: true
+      tooltip:
+        show: true
+        fields: ["Fund", "Share Class", "NAV"]
+      interactivity:
+        filterable: true
+        highlight_on_hover: true
+
+    - id: kpi_4
+      name: "Marketing ROI"
+      chart_type: "heatmap"
+      axes:
+        x: "Campaign"
+        y: "Month"
+        value: "ROI (%)"
+      aggregation: "pre-computed"
+      drill_down: true
+      tooltip:
+        show: true
+        fields: ["Fund", "Campaign", "Channel", "Region", "ROI"]
+      interactivity:
+        filterable: true
+        highlight_on_hover: true
+
+    - id: kpi_5
+      name: "Cost per Acquisition (CPA)"
+      chart_type: "bar"
+      axes:
+        x: "Campaign"
+        y: "CPA (Currency)"
+      aggregation: "on-demand"
+      drill_down: true
+      tooltip:
+        show: true
+        fields: ["Fund", "Campaign", "Channel", "Region", "CPA"]
+      interactivity:
+        filterable: true
+        highlight_on_hover: true
